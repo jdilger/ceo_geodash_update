@@ -19,44 +19,36 @@ var visualization = {
 
 function panSharpenLandsat(landsatCollectionName, bandsToSharpen, bandsCloudScore, startPeriod, endPeriod ){
 
-	// Load a Landsat collection. (GREENEST PIXEL, NO NEED TO CLEAN CLOUDS!! )
-	var image= ee.ImageCollection( landsatCollectionName )
-	// Select the bands of interest to avoid taking up memory.
-	//.select(bandsCloudScore)
-	// Filter to get only six months of data.
-	.filterDate( startPeriod , endPeriod )
-	.mosaic();
-	image = ee.Image(image );
+  // Load a Landsat collection. (GREENEST PIXEL, NO NEED TO CLEAN CLOUDS!! )
+  var image= ee.ImageCollection( landsatCollectionName )
+  // Select the bands of interest to avoid taking up memory.
+  //.select(bandsCloudScore)
+  // Filter to get only six months of data.
+  .filterDate( startPeriod , endPeriod )
+  .mosaic();
+  image = ee.Image(image );
 
 
-	// Convert the RGB bands to the HSV color space.
-	var hsv = image.select( bandsToSharpen ).rgbToHsv();
+  // Convert the RGB bands to the HSV color space.
+  var hsv = image.select( bandsToSharpen ).rgbToHsv();
 
-	// Swap in the panchromatic band and convert back to RGB.
-	// The pan band is B8 for both Landsat 7 and 8
-	var sharpened = ee.Image.cat([
-		hsv.select('hue'), hsv.select('saturation'), image.select('B8')
-	]).hsvToRgb();
+  // Swap in the panchromatic band and convert back to RGB.
+  // The pan band is B8 for both Landsat 7 and 8
+  var sharpened = ee.Image.cat([
+    hsv.select('hue'), hsv.select('saturation'), image.select('B8')
+  ]).hsvToRgb();
 
-	return sharpened;
-}
-
-
-function cloudMask(im) {
-  // Opaque and cirrus cloud masks cause bits 10 and 11 in QA60 to be set,
-  // so values less than 1024 are cloud-free
-  var mask = ee.Image(0).where(im.select('QA60').gte(1024), 1).not();
-  return im.updateMask(mask);
+  return sharpened;
 }
 
 function sharpenSentinel(image){
-	// sharpen see e.g. http://www.cse.psu.edu/~rtc12/CSE486/lecture11_6pp.pdf
-	var log = image
+  // sharpen see e.g. http://www.cse.psu.edu/~rtc12/CSE486/lecture11_6pp.pdf
+  var log = image
     .convolve(ee.Kernel.gaussian(10, 7, 'meters')) // G
     .convolve(ee.Kernel.laplacian8(0.5)); // L of G
 
-	var sharpened = image.subtract(log);
-	return sharpened;
+  var sharpened = image.subtract(log);
+  return sharpened;
 }
 
 // From the GEE forum. Thread : https://groups.google.com/forum/#!searchin/google-earth-engine-developers/sentinel$20cloud|sort:date/google-earth-engine-developers/i63DS-Dg8Sg/LLk9ZM0mAgAJ
@@ -211,7 +203,7 @@ function mosaicByTime (images) {
   );
 
   return ee.ImageCollection(results);
-};
+}
 
 function getSentinel2CloudFreeImage ( geometry, startDate, endDate ){
   var images =  getSentinel2Images(startDate, endDate, geometry, true );
@@ -230,7 +222,7 @@ function getSentinel2Images (start, end, geometry, mask ){
       }
       
       return sentinelImages;
-};
+}
 
 function getImageTimeStart( geometry, timeStart ){
     var equalDate = ee.Filter.equals('system:time_start', timeStart);
@@ -238,311 +230,12 @@ function getImageTimeStart( geometry, timeStart ){
       ee.ImageCollection('COPERNICUS/S2')
       .filterBounds(geometry).filter(equalDate).first());
 }
-//////////////////////////////////////////////////////////////////////////
-// OTHER INDICES
-//////////////////////////////////////////////////////////////////////////
-// function getSaviIndices( imageCollection, region, nirBand, redBand ){
-  
-//   print( imageCollection.bandNames() );  
-  
-//   // Calculate the SAVI index for each of the pixels within the clipped images
-//   var imageCollectionWithSAVI = 
-//     imageCollection.map(
-//       function(image){
-        
-//       if( 
-//         image.bandNames().contains( redBand) 
-//         ){
-//         var saviImage = ee.Image(0).expression(
-//             '(1 + L) * float(nir - red)/ (nir + red + L)',
-//             {
-//               'nir': image.select(nirBand),
-//               'red': image.select(redBand),
-//               'L': 0.5
-//             }).select([0],['SAVI']);
-//           return saviImage;
-       
-//       }else{
-//         return image;
-//       }
-//     }
-      
-//   );
-
-//   return  imageCollectionWithSAVI;
-// }
-
-// function getOsaviIndices( imageCollection, region, nirBand, redBand ){
-    
-//   // Calculate the OSAVI index for each of the pixels within the clipped images
-//   var imageCollectionWithOSAVI = 
-//     imageCollection.map(
-//       function(image){
-      
-//         var osaviImage = ee.Image(0).expression(
-//           '(1 + L) * float(nir - red)/ (nir + red + L)',
-//           {
-//             'nir': image.select(nirBand),
-//             'red': image.select(redBand),
-//             'L': 0.16
-//           }).select([0],['OSAVI']);
-          
-       
-//         return ee.Image.cat(image,osaviImage);
-//       }
-      
-//   );
-
-//   return  imageCollectionWithOSAVI;
-// }
-
-
-// function getMsaviIndices( imageCollection, region, nirBand, redBand ){
-    
-//   // Calculate the MSAVI index for each of the pixels within the clipped images
-//   var imageCollectionWithMSAVI = 
-//     imageCollection.map(
-//       function(image){
-      
-//         var msaviImage = ee.Image(0).expression(
-//           '( 2*nir + 1 - sqrt( pow( (2*nir+1), 2 ) - 8*(nir - red) ) )/2',
-//           {
-//             'nir': image.select(nirBand), 
-//             'red': image.select(redBand)
-//           }).select([0],['MSAVI']);
-          
-       
-//         return ee.Image.cat(image,msaviImage);
-//       }
-      
-//   );
-
-//   return  imageCollectionWithMSAVI;
-// }
-
-//////////////////////////////////////////////////////////////////////////
-// ASTER
-//////////////////////////////////////////////////////////////////////////
-/***
-* Aster TOA reflectance and temperature from DN. This example is for the ASTER VNIR subsystem (i.e. bands 1,2,3N)
-* 
-* Algorithm: 
-*  http://www.pancroma.com/downloads/ASTER%20Temperature%20and%20Reflectance.pdf
-*  https://lpdaac.usgs.gov/sites/default/files/public/product_documentation/aster_l1t_users_guide.pdf
-* 
-* Authors: 
-*  Gennadii Donchyts (GD), gennadiy.donchyts@gmail.com
-*  Sam Murphy (SM), samsammurphy@gmail.com - DN > TOA
-* 
-* Changelog:
-*  GD 2016-06: DN > temperature
-*  SM 2016-06: DN > TOA
-*  GD 2017-06: added swir1
-* 
-* License: MIT, https://opensource.org/licenses/MIT
-*/
-
-/***
-* Rescales to given ranges
-*/
-function rescale (img, exp, thresholds) {
-  return img.expression(exp, {img: img}).subtract(thresholds[0]).divide(thresholds[1] - thresholds[0]);
-}
-
-/*** 
-* Aster radiometric correction algorithms
-*/
-var Aster = {
-  radiance: {
-    fromDN: function(image) {
-      // Gain coefficients are dynamic (i.e. can be high, normal, low_1 or low_2)
-      var multiplier = ee.Image([
-        ee.Number(image.get('GAIN_COEFFICIENT_B01')),
-        ee.Number(image.get('GAIN_COEFFICIENT_B02')),
-        ee.Number(image.get('GAIN_COEFFICIENT_B3N')),
-        ee.Number(image.get('GAIN_COEFFICIENT_B04'))
-        ]).float();
-      
-      // Apply correction
-      var radiance = image.select(['B01', 'B02', 'B3N', 'B04'], ['green','red','nir','swir1']).subtract(1).multiply(multiplier);
-      
-      // Define properties required for reflectance calculation
-      var solar_z = ee.Number(90).subtract(image.get('SOLAR_ELEVATION'));
-      
-      return radiance.set({
-        'system:time_start': image.get('system:time_start'),
-        'solar_zenith':solar_z
-      });
-    }
-  },
-  
-  reflectance: {
-    fromRad: function(rad) {
-      // calculate day of year from time stamp
-      var date = ee.Date(rad.get('system:time_start'));
-      var jan01 = ee.Date.fromYMD(date.get('year'),1,1);
-      var doy = date.difference(jan01,'day').add(1);
-
-      // Earth-Sun distance squared (d2) 
-      var d = ee.Number(doy).subtract(4).multiply(0.017202).cos().multiply(-0.01672).add(1); // http://physics.stackexchange.com/questions/177949/earth-sun-distance-on-a-given-day-of-the-year
-      var d2 = d.multiply(d);
-      
-      // mean exoatmospheric solar irradiance (ESUN)
-      var ESUN = [1847, 1553, 1118, 232.5]; // from Thome et al (A) see http://www.pancroma.com/downloads/ASTER%20Temperature%20and%20Reflectance.pdf
-      
-      // cosine of solar zenith angle (cosz)
-      var solar_z = ee.Number(rad.get('solar_zenith'));
-      var cosz = solar_z.multiply(Math.PI).divide(180).cos();
-
-      // calculate reflectance
-      var scalarFactors = ee.Number(Math.PI).multiply(d2).divide(cosz);
-      var scalarApplied = rad.multiply(scalarFactors);
-      var reflectance = scalarApplied.divide(ESUN);
-      
-      return reflectance;
-    }
-  },
-  
-  temperature: {
-    fromDN: function(image) {
-      var bands = ['B10', 'B11', 'B12', 'B13', 'B14'];
-      var multiplier = ee.Image([0.006822, 0.006780, 0.006590, 0.005693, 0.005225]);
-      var k1 = ee.Image([3040.136402, 2482.375199, 1935.060183, 866.468575, 641.326517]);
-      var k2 = ee.Image([1735.337945, 1666.398761, 1585.420044, 1350.069147, 1271.221673]);
-  
-      var radiance = image.select(bands).subtract(1).multiply(multiplier);
-      var t = k2.divide(k1.divide(radiance).add(1).log()).rename(bands);
-      
-      return t;
-    }
-  },
-  
-  cloudScore: function(image) {
-    // Compute several indicators of cloudyness and take the minimum of them.
-    var score = ee.Image(1.0);
-
-    // Snow is reasonably bright in all visible bands.
-    score = score.min(rescale(image, 'img.red + img.green', [0.2, 0.8]));
-
-    // Excluded this for snow reasonably bright in all infrared bands.
-    score = score.min(rescale(image, 'img.nir + img.swir1', [0.2, 0.4]));
-
-    // Clouds are reasonably cool in temperature.
-    score = score.min(rescale(image.resample('bicubic'), '(img.B10 + img.B12 + img.B14) / 3.0', [293, 280]));
-
-    // However, clouds are not snow.
-    //let ndsi = img.normalizedDifference(['red', 'swir']);
-    //score = score.min(rescale(ndsi, 'img', [0.8, 0.6])).aside(show, 'score ndsi')
-
-    return score;
-  },
-  
-  TOA: function(image) {
-    var radiance = Aster.radiance.fromDN(image);
-    var reflectance = Aster.reflectance.fromRad(radiance);
-    var temperature = Aster.temperature.fromDN(image);
-
-    var result = reflectance.addBands(temperature);
-    result = result.set('system:time_start', image.get('system:time_start'));
-    result = result.copyProperties(image);
-    result = ee.Image(result);
-    
-    return result;
-  }
-};
-
-
-function getAsterForYear(year){
-  // ASTER image collection with VNIR filter in the ROI
-  var aster = ee.ImageCollection('ASTER/AST_L1T_003').filterDate(year+'-01-01', year+'-12-31').filter(ee.Filter.and(
-      ee.Filter.listContains('ORIGINAL_BANDS_PRESENT', 'B01'),
-      ee.Filter.listContains('ORIGINAL_BANDS_PRESENT', 'B02'),
-      ee.Filter.listContains('ORIGINAL_BANDS_PRESENT', 'B3N'),
-      ee.Filter.listContains('ORIGINAL_BANDS_PRESENT', 'B04')
-      ));
-  var refcol = aster.map(Aster.TOA);
-  var median = refcol.reduce(ee.Reducer.median());
-  return median;
-}
 
 //////////////////////////////////////////////////////////////////////////
 // UI
 //////////////////////////////////////////////////////////////////////////
 
 var PROPERTY_IMAGE_NAME = "image_name"; 
-
-function addCheckBox( map, visualization, images, name){
-  
-  var onChangeFunction = function( checked ){
-      var image;
-      if( checked ){
-       image = images[1];
-      }else{
-        image = images[0];
-      }
-      
-      image = image.visualize(visualization );
-      map.layers().set( 0, image);
-  };
-    
-  var checkBox = ui.Checkbox({
-    label : name,
-    onChange: onChangeFunction,
-    style: {stretch: 'horizontal'}
-  });
-  
-
-  map.add(checkBox);
-  
-  return map;
-}
-
-// function addCheckBoxMult( map, visualizationArray, images, name){
-  
-//   var onChangeFunction = function( checked ){
-//       var image;
-//       if( checked ){
-//       image = images[1];
-//       image = image.visualize(visualizationArray[1] );
-//       }else{
-//         image = images[0];
-//         image = image.visualize(visualizationArray[0] );
-//       }
-      
-      
-//       map.layers().set( 0, image);
-//   };
-    
-//   var checkBox = ui.Checkbox({
-//     label : name,
-//     onChange: onChangeFunction,
-//     style: {stretch: 'horizontal'}
-//   });
-//   onChangeFunction( false );
-  
-//   map.add(checkBox);
-  
-//   return map;
-// }
-
-// function getLabelImage(image){
-//   return ee.Algorithms.If(
-//       image.get("system:time_start"),
-//       ee.Date(image.get("system:time_start") ).format( "dd, MMMM, yyyy"),
-//       image.get(PROPERTY_IMAGE_NAME)
-//     );
-// }
-
-// function getImageryDates( images ){  
-
-//   var getImageryDate = function(current, aggregate){
-//     var label = getLabelImage(current);
-//     return ee.Dictionary( { date: label });  
-//   };
-
-//   var dateValues = images.iterate(getImageryDate );
-//   return dateValues;
-// }
 
 function addPlotToMap(map, plot, subplots){
     map.addLayer(plot, {}, "Plot");
@@ -607,7 +300,6 @@ function showAsterForYearWrapper( year){
   showAsterForYear( mapAster, year);
 }
 
-
 function showLandsat5ForYear(map, year){
   var landsat = (ee.Image) ( ee.ImageCollection( "LANDSAT/LT5_L1T_ANNUAL_GREENEST_TOA" ).select(['B4', 'B5', 'B3']).filterDate( year + "-01-01", year + "-12-31" ).first() );
   landsat = landsat.visualize(visualization.landsat5 );
@@ -641,7 +333,6 @@ function showAsterForYear(map, year){
   asterImage = asterImage.visualize( visualization.asterFalse );
   map.layers().set( 0, asterImage);
 }
-
 
 function addL7Slider(mapWithSlider , selectedYear ){
   // Create a label and slider.
@@ -734,6 +425,7 @@ function addL5Slider(mapWithSlider , selectedYear ){
 
 //////////////////////////////////////////////////////////////////////////
 // CHARTS
+//////////////////////////////////////////////////////////////////////////
 
 // Auxiliary Sentinel Map variable, do not remove
 var sentinelAux = 0;
@@ -956,12 +648,110 @@ function getSentinel2NDVI(plot, start, end, name, sentinelMap, sentinelMap2 ){
 }
 
 //////////////////////////////////////////////////////////////////////////
+// FRAMES
+//////////////////////////////////////////////////////////////////////////
+var gfc = ee.Image("UMD/hansen/global_forest_change_2018_v1_6");
+
+// Script automatically produced by Collect Earth for the plot that has been clicked on Google Earht. See bottom of the script for more info on customization.
+// This script will show graphs of NDVI, EVI and NDWI mean-values for the pixels contained within the plot.
+function addCharts( plot, start, end, name, sentinelMap, landsat7Map, landsat8Map, panel ){
+    panel.widgets().add(  getModis16DayNDVI( plot, start, end, name) );
+    panel.widgets().add(  getLandsatNDVI( plot, start, end, name, landsat7Map, landsat8Map  ) );
+    panel.widgets().add(  getSentinel2NDVI( plot, start, end, name,sentinelMap ) );
+}
+
+function processPlotInfo( plot, start, end, lastYearsDate, subplots, plotId ){
+    var startYear = "-01-01"; 
+    var endYear = "-12-31";
+    var lastYearsDateObject = new Date( lastYearsDate );
+    var lastYearStart = lastYearsDateObject.getFullYear() + startYear;
+    var lastYearEnd = lastYearsDateObject.getFullYear() +  endYear;
+
+    // Calls composit from GFC for 2000/2018 for initial LS visuliztions
+    // could probally remove this, but is quick and doesnt require any processing. 
+    var gfcFirst_2000 = gfc.select(["first_b40","first_b50","first_b30"]).divide(1000);
+    var gfcLast_2018 = gfc.select(["last_b40","last_b50","last_b30"]).divide(1000);
+   
+    // Create a map for each visualization option.
+    var maps = [];
+    
+    var landsat8Map =   createL8SliderMap(
+      gfcLast_2018, 
+        visualization.landsat8,
+      2018,
+      "Landsat 8 2018 GFC mosaic", 
+      plot, 
+      subplots);
+    
+    var landsat7Map =   createL7SliderMap(
+      gfcFirst_2000, 
+        visualization.landsat7, 
+      2000, 
+      "Landsat 7 2000 GFC mosaic", 
+      plot, 
+      subplots);
+
+    // gets median of sd and ed
+    var sentinelImage12MonthsComposite =   getSentinel2CloudFreeImage( plot, lastYearsDate, end );
+    //sharpens image
+    sentinelImage12MonthsComposite =   sharpenSentinel( sentinelImage12MonthsComposite)
+      .select(['nir','red', 'swir1'])
+      .rename(['B8','B4','B11']).multiply( ee.Image(10000));
+
+    var labelS2 = "Composite "+  lastYearsDate +" - "+ end;
+
+    sentinelImage12MonthsComposite = ee.Image(sentinelImage12MonthsComposite).set(
+        PROPERTY_IMAGE_NAME,
+      labelS2
+    );
+    
+    var label = ui.Label('Sentinel 2 : Composite of last 12 months. To select single image click on Sentinel NDVI chart');
+    
+    var sentinelMap = ui.Map();
+    sentinelMap.add(label);
+    sentinelMap.addLayer(sentinelImage12MonthsComposite.visualize(  visualization.sentinelFalse));
+    sentinelMap =   addPlotToMap(sentinelMap, plot, subplots);
+    
+    
+    maps.push(sentinelMap);
+    maps.push(landsat8Map);
+    maps.push(landsat7Map);
+    
+    var linker = ui.Map.Linker(maps);
+    // Create a grid of maps.
+    
+    var panelLeft =  ui.Panel([sentinelMap], null, {stretch: 'both'});
+    var panelRight =  ui.Panel([landsat8Map, landsat7Map], null, {stretch: 'both'});
+    
+    var mapGrid = ui.Panel([ panelLeft,panelRight],
+      ui.Panel.Layout.Flow('horizontal'), {stretch: 'both'}
+    );
+
+    // Enable zooming on the top-left map.
+    sentinelMap.setControlVisibility({zoomControl: true, fullscreenControl:true});
+    
+    // Show the scale (e.g. '500m') on the bottom-right map.
+    landsat7Map.setControlVisibility({scaleControl: true, fullscreenControl:true});
+    
+    landsat8Map.setControlVisibility({ fullscreenControl:true});
+    
+    
+    // Create a panel to hold title, intro text, chart and legend components.
+    var inspectorPanel = ui.Panel({style: {width: '30%'}});
+    addCharts( plot, start, end , plotId, sentinelMap,  landsat7Map , landsat8Map, inspectorPanel  );
+    
+    // Add the maps and title to the ui.root.
+    ui.root.clear();
+
+    ui.root.add(ui.SplitPanel(mapGrid, inspectorPanel));
+    ui.root.setLayout(ui.Panel.Layout.Flow('vertical'));
+    
+    Map.centerObject( plot );
+}
+//////////////////////////////////////////////////////////////////////////
 // EXPORTS
 //////////////////////////////////////////////////////////////////////////
 exports = { 
-
-          // getLandsat7MonthlyNDVI : getLandsat7MonthlyNDVI,
-          // getLandsat8MonthlyNDVI : getLandsat8MonthlyNDVI,
           getSentinel2NDVI : getSentinel2NDVI,
           getModis16DayNDVI : getModis16DayNDVI,
           getLandsatNDVI : getLandsatNDVI,
@@ -975,6 +765,7 @@ exports = {
           mosaicByTime : mosaicByTime,
           getSentinel2Images : getSentinel2Images,
           sharpenSentinel : sharpenSentinel,
-          cloudMask : cloudMask,
-          visualization : visualization
+          visualization : visualization,
+          processPlotInfo : processPlotInfo,
+          addCharts: addCharts,
           };
